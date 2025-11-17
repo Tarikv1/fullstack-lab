@@ -1,109 +1,114 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { fetchNotes, createNote, deleteNote, type Note } from "./api";
 
 function App() {
-  const [healthStatus, setHealthStatus] = useState<string | null>(null);
-  const [healthLoading, setHealthLoading] = useState(false);
-  const [healthError, setHealthError] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [a, setA] = useState<string>("");
-  const [b, setB] = useState<string>("");
-  const [sumResult, setSumResult] = useState<string | null>(null);
-  const [sumLoading, setSumLoading] = useState(false);
-  const [sumError, setSumError] = useState<string | null>(null);
-
-  const API_BASE = "http://127.0.0.1:8000";
-
-  const checkHealth = async () => {
+  async function loadNotes() {
     try {
-      setHealthLoading(true);
-      setHealthError(null);
-      const res = await fetch(`${API_BASE}/health`);
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      const data = await res.json();
-      setHealthStatus(JSON.stringify(data));
-    } catch (err: any) {
-      setHealthError(err.message ?? "Unknown error");
+      setLoading(true);
+      setError(null);
+      const data = await fetchNotes();
+      setNotes(data);
+    } catch (e) {
+      setError("Failed to load notes");
     } finally {
-      setHealthLoading(false);
+      setLoading(false);
     }
-  };
+  }
 
-  const calcSum = async () => {
-    if (a.trim() === "" || b.trim() === "") {
-      setSumError("Both a and b are required");
-      setSumResult(null);
-      return;
-    }
+  useEffect(() => {
+    loadNotes();
+  }, []);
 
-    if (Number.isNaN(Number(a)) || Number.isNaN(Number(b))) {
-      setSumError("a and b must be numbers");
-      setSumResult(null);
-      return;
-    }
+  async function handleAddNote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim() && !content.trim()) return;
 
     try {
-      setSumLoading(true);
-      setSumError(null);
-      setSumResult(null);
-
-      const params = new URLSearchParams({ a, b });
-      const res = await fetch(`${API_BASE}/calc/sum?${params.toString()}`);
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        const msg = data?.detail ?? `HTTP ${res.status}`;
-        throw new Error(msg);
-      }
-
-      const data = await res.json();
-      setSumResult(String(data.result));
-    } catch (err: any) {
-      setSumError(err.message ?? "Unknown error");
+      setSaving(true);
+      setError(null);
+      const newNote = await createNote({ title, content });
+      setNotes((prev) => [newNote, ...prev]);
+      setTitle("");
+      setContent("");
+    } catch (e: any) {
+      console.error("Save note error:", e?.response?.data || e);
+      setError("Failed to save note");
     } finally {
-      setSumLoading(false);
+      setSaving(false);
     }
-  };
+  }
+
+  async function handleDelete(id: number) {
+    try {
+      await deleteNote(id);
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+    } catch (e) {
+      setError("Failed to delete note");
+    }
+  }
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "system-ui", maxWidth: 600 }}>
-      <h1>Fullstack Lab</h1>
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: "2rem" }}>
+      <h1>Notes</h1>
 
-      {/* Health check section */}
-      <section style={{ marginBottom: "2rem" }}>
-        <h2>API Health</h2>
-        <button onClick={checkHealth} disabled={healthLoading}>
-          {healthLoading ? "Checking..." : "Check API health"}
-        </button>
-        {healthStatus && <p>API response: {healthStatus}</p>}
-        {healthError && <p style={{ color: "red" }}>Error: {healthError}</p>}
-      </section>
-
-      {/* Calculator section */}
-      <section>
-        <h2>Sum Calculator (/calc/sum)</h2>
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+      <form onSubmit={handleAddNote} style={{ marginBottom: "1.5rem" }}>
+        <div style={{ marginBottom: "0.5rem" }}>
           <input
             type="text"
-            placeholder="a"
-            value={a}
-            onChange={(e) => setA(e.target.value)}
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{ width: "100%", padding: "0.5rem" }}
           />
-          <input
-            type="text"
-            placeholder="b"
-            value={b}
-            onChange={(e) => setB(e.target.value)}
-          />
-          <button onClick={calcSum} disabled={sumLoading}>
-            {sumLoading ? "Calculating..." : "Calculate"}
-          </button>
         </div>
+        <div style={{ marginBottom: "0.5rem" }}>
+          <textarea
+            placeholder="Content"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            rows={4}
+            style={{ width: "100%", padding: "0.5rem" }}
+          />
+        </div>
+        <button type="submit" disabled={saving}>
+          {saving ? "Saving..." : "Add Note"}
+        </button>
+      </form>
 
-        {sumResult !== null && <p>Result: {sumResult}</p>}
-        {sumError && <p style={{ color: "red" }}>Error: {sumError}</p>}
-      </section>
+      {loading && <p>Loading notes...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      <ul style={{ listStyle: "none", padding: 0 }}>
+        {notes.map((note) => (
+          <li
+            key={note.id}
+            style={{
+              border: "1px solid #ddd",
+              borderRadius: 8,
+              padding: "0.75rem 1rem",
+              marginBottom: "0.75rem",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <h3 style={{ margin: 0 }}>{note.title || "Untitled"}</h3>
+              <button onClick={() => handleDelete(note.id)}>Delete</button>
+            </div>
+            {note.content && <p style={{ marginTop: "0.5rem" }}>{note.content}</p>}
+            {note.created_at && (
+              <small style={{ color: "#666" }}>
+                {new Date(note.created_at).toLocaleString()}
+              </small>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
