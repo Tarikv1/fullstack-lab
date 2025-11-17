@@ -7,7 +7,6 @@ from app.models.note import Note, NoteCreate
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 
-
 @router.post("/", response_model=Note)
 def create_note(note: NoteCreate, session: Session = Depends(get_session)):
     db_note = Note(title=note.title, body=note.body)
