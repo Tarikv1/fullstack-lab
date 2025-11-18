@@ -1,8 +1,13 @@
 import axios from "axios";
 
-export const api = axios.create({
-  baseURL: "http://127.0.0.1:8000", // FastAPI backend
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
+
 
 export type Note = {
   id: number;
@@ -38,17 +43,38 @@ export async function createNote(data: { title: string; content: string }) {
   } as Note;
 }
 
-// “Update” note = create new + delete old (no backend PUT needed)
+// PUT /notes/{id}
 export async function updateNote(
-  oldId: number,
+  id: number,
   data: { title: string; content: string }
 ) {
-  const newNote = await createNote(data);
-  await deleteNote(oldId);
-  return newNote;
+  const res = await api.put(`/notes/${id}`, {
+    title: data.title,
+    body: data.content, // backend expects "body"
+  });
+
+  const n = res.data;
+  return {
+    id: n.id,
+    title: n.title,
+    content: n.content ?? n.body ?? "",
+    created_at: n.created_at,
+  } as Note;
 }
 
 // DELETE /notes/{id}
 export async function deleteNote(id: number) {
   await api.delete(`/notes/${id}`);
+}
+
+// REGISTER
+export async function registerUser(data: { username: string; password: string }) {
+  const res = await api.post("/auth/register", data);
+  return res.data;
+}
+
+// LOGIN → returns token
+export async function loginUser(data: { username: string; password: string }) {
+  const res = await api.post("/auth/login", data);
+  return res.data; // should include: { access_token, token_type }
 }

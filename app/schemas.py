@@ -1,8 +1,13 @@
 from pydantic import BaseModel, Field
+from typing import Optional
 
 class TodoBase(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     done: bool = False
+
+class NoteUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    body: Optional[str] = Field(default=None, min_length=1)
 
 class TodoCreate(TodoBase):
     pass
@@ -35,3 +40,20 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     user_id: int | None = None
+
+class NoteBase(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(min_length=1)
+
+class NoteCreate(NoteBase):
+    pass
+
+class NoteUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    body: Optional[str] = Field(default=None, min_length=1)
+
+class NoteOut(NoteBase):
+    id: int
+
+    class Config:
+        from_attributes = True

@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
+from app import models, schemas
 from app.db.session import get_session
 from app.models.note import Note, NoteCreate
 
@@ -28,3 +29,23 @@ def get_note(note_id: int, session: Session = Depends(get_session)):
     if note is None:
         raise HTTPException(status_code=404, detail="Note not found")
     return note
+
+@router.put("/{note_id}", response_model=Note)
+def update_note(
+    note_id: int,
+    note_update: schemas.NoteUpdate,
+    session: Session = Depends(get_session),
+):
+    db_note = session.get(Note, note_id)
+    if db_note is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    if note_update.title is not None:
+        db_note.title = note_update.title
+    if note_update.body is not None:
+        db_note.body = note_update.body
+
+    session.add(db_note)
+    session.commit()
+    session.refresh(db_note)
+    return db_note

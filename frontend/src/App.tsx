@@ -1,3 +1,5 @@
+import { Login } from "./auth/Login";
+import { Register } from "./auth/Register";
 import { useEffect, useState } from "react";
 import {
   fetchNotes,
@@ -15,6 +17,22 @@ function App() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    return (
+      <div style={{ maxWidth: 400, margin: "0 auto", padding: "2rem" }}>
+        <h1>Login required</h1>
+
+        {/* LOGIN FORM */}
+        <Login onLogin={() => window.location.reload()} />
+
+        {/* REGISTER FORM */}
+        <Register />
+      </div>
+    );
+  }
+
 
   async function loadNotes() {
     try {
