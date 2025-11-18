@@ -4,7 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers.health import router as health_router
 from app.routers.calc import router as calc_router
 from app.routers.notes import router as notes_router
+from app.routers.users import router as users_router
+from app.routers.auth import router as auth_router
 from app.db.session import create_db_and_tables
+
+from app.models import note as note_model
+from app.models import note as user_model
 
 app = FastAPI()
 
@@ -37,3 +42,5 @@ def root():
 app.include_router(health_router)
 app.include_router(calc_router)
 app.include_router(notes_router)
+app.include_router(users_router)
+app.include_router(auth_router)
